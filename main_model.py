@@ -4,15 +4,13 @@ import torch
 import numpy as np
 
 
-class AutoLabeler(nn.Module):
-    def __init__(self, vocab_size, hidden_layer_size):
+class MainModel(nn.Module):
+    def __init__(self, vocab_size):
         """
 
         """
         super().__init__()
-        self.linear1 = nn.Linear(vocab_size, hidden_layer_size)
-        self.linear2 = nn.Linear(hidden_layer_size, 1)
-        # self.linear3 = nn.Linear(hidden_layer_size, 1)
+        self.linear1 = nn.Linear(vocab_size, 1)
 
     def forward(self, input):
 
@@ -25,7 +23,5 @@ class AutoLabeler(nn.Module):
                  (batch_size, seq_len, vocab_size)
         """
         out1 = self.linear1(input)
-        out2 = self.linear2(out1)
         s = nn.Softmax(dim=0)
-        # out3 = self.linear3(out2)
-        return s(out2)
+        return s(out1)
