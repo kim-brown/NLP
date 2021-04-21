@@ -5,12 +5,16 @@ import numpy as np
 
 
 class MainModel(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self, vocab_size, hidden_layer_size, embedding_size, window_size):
         """
 
         """
         super().__init__()
-        self.linear1 = nn.Linear(vocab_size, 1)
+        self.embeddings = torch.nn.Embedding(vocab_size, embedding_size)
+        self.lstm = torch.nn.LSTM(embedding_size, hidden_layer_size,
+        num_layers=2, dropout=0.1)
+        self.linear1 = nn.Linear(hidden_layer_size, 1)
+        self.linear2 = nn.Linear(window_size, 1)
 
     def forward(self, input):
 
@@ -20,8 +24,11 @@ class MainModel(nn.Module):
         :param inputs: word ids (tokens) of shape (batch_size, seq_len)
 
         :return: the logits, a tensor of shape
-                 (batch_size, seq_len, vocab_size)
+                 (batch_size, 1)
         """
-        out1 = self.linear1(input)
+        embs = self.embeddings(input)
+        out1, _ = self.lstm(embs)
+        out2 = self.linear1(out1).squeeze()
         s = nn.Softmax(dim=0)
-        return s(out1)
+        out3 = self.linear2(out2)
+        return s(out3)

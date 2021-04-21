@@ -22,7 +22,7 @@ class AutoLabeler(nn.Module):
         :param inputs: word ids (tokens) of shape (batch_size, seq_len)
 
         :return: the logits, a tensor of shape
-                 (batch_size, seq_len, vocab_size)
+                 (batch_size, 1)
         """
         out1 = self.linear1(input)
         out2 = self.linear2(out1)

@@ -125,11 +125,9 @@ def process_file(fn, label, window_size, word2id):
             words = line.split()
 
             for w in words:
-                w = w.strip('\n')
-                w = w.strip('\t')
-                w = w.strip()
+                word = clean_word(w)
 
-                if w == "[sep]":
+                if word == "[sep]":
                     post = post[:window_size]
                     posts.append(torch.tensor(post))
                     post_cnt += 1
@@ -138,10 +136,24 @@ def process_file(fn, label, window_size, word2id):
                     labels.append(torch.tensor(lab))
                     post = []
                 else:
-                    if w in word2id:
-                        post.append(word2id[w])
+                    if word in word2id:
+                        post.append(word2id[word])
         print("file ", fn, " has ", post_cnt, " posts")
         return posts, labels
+
+def clean_word(w):
+    """
+    stem and strip word
+    """
+    word = w.strip('\t')
+    word = word.strip()
+    if word[-3:] == "ing":
+        word = word[:-3]
+    elif word[-3:] == "ed":
+        word = word[:-2]
+    elif word[-1:] == "s":
+        word = word[:-1]
+    return word
 
 def bag_of_words(posts, vocab_size):
     matrices = []
@@ -166,16 +178,20 @@ class MainDataset(Dataset):
 
         self.post_features = bag_of_words(self.posts, len(word2id))
 
-        num_batches = int(len(self.posts) / batch_size)
+        self.post_features = pad_sequence(self.post_features, batch_first=True, padding_value=0).float()
+        num_batches = int(len(self.post_features) / batch_size)
+        self.post_features = self.post_features[:num_batches * batch_size]
+
+        self.posts = pad_sequence(self.posts, batch_first=True, padding_value=0)
         self.posts = self.posts[:num_batches * batch_size]
-        self.posts = pad_sequence(self.posts, batch_first=True, padding_value=0).float()
 
 
     def __len__(self):
-        return len(self.posts)
+        return len(self.post_features)
 
     def __getitem__(self, idx):
         to_return = (
             self.posts[idx],
+            self.post_features[idx],
         )
         return to_return
