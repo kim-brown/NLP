@@ -22,12 +22,12 @@ hyper_params = {
  }
 
 autolabeler_hyper_params = {
-    "batch_size" : 10,
+    "batch_size" : 2,
     "num_epochs" : 50,
-    "learning_rate": 0.01,
-    "window_size": 128,
+    "learning_rate": 0.0001,
+    "window_size": 256,
     "hidden_layer_size": 128,
-    "vocab_size": 2000
+    "vocab_size": 750
 }
 
 def autolabeler_train(model, train_loader, optimizer, experiment):
@@ -54,17 +54,16 @@ def autolabeler_test(model, test_loader, optimizer, experiment):
     total_posts = 0.0
     total_loss = 0.0
     with experiment.test():
-        for i in range(autolabeler_hyper_params["num_epochs"]):
-            for inps, labs in tqdm(test_loader):
-                logits = model(inps)
-                # print("LOGITS: ", logits)
-                total_loss += loss_fn(logits, labs).item() * len(labs)
-                num_correct += torch.sum(((logits > 0.5) == labs)).item()
-                total_posts += len(labs)
+        for inps, labs in tqdm(test_loader):
+            logits = model(inps)
+            # print("LOGITS: ", logits)
+            total_loss += loss_fn(logits, labs).item() * len(labs)
+            num_correct += torch.sum(((logits > 0.5) == labs)).item()
+            total_posts += len(labs)
 
         accuracy = num_correct / total_posts
         # print("num correct: ", num_correct, " total posts: ", total_posts)
-        perplexity = torch.exp(torch.tensor(total_loss / total_posts / autolabeler_hyper_params["num_epochs"])).item()
+        perplexity = torch.exp(torch.tensor(total_loss / total_posts)).item()
         experiment.log_metric("perplexity", perplexity)
         print("PERPLEXITY: ", perplexity)
         print("ACCURACY: ", accuracy)
