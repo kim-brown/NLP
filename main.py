@@ -10,8 +10,6 @@ from autolabeler import AutoLabeler
 from main_model import MainModel
 from tqdm import tqdm
 
-#DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 hyper_params = {
     "batch_size": 4,
     "embedding_size": 375,
@@ -42,7 +40,6 @@ def autolabeler_train(model, train_loader, optimizer, experiment):
                 optimizer.zero_grad()
                 logits = model(inps)
                 loss = loss_fn(logits, labs)
-                # print("LOSS: ", loss)
                 loss.backward()
                 optimizer.step()
 
@@ -57,7 +54,6 @@ def autolabeler_test(model, test_loader, optimizer, experiment):
     with experiment.test():
         for inps, labs in tqdm(test_loader):
             logits = model(inps)
-            # print("LOGITS: ", logits)
             total_loss += loss_fn(logits, labs).item() * len(labs)
             num_correct += torch.sum(((logits > 0.5) == labs)).item()
             total_posts += len(labs)
@@ -171,13 +167,11 @@ if __name__ == "__main__":
     if args.load:
         main_model.load_state_dict(torch.load('main_model.pt'))
     if args.train:
-        # run train loop here
         print("running training loop...")
         optimizer = optim.Adam(main_model.parameters(), hyper_params["learning_rate"])
         train(main_model, main_train_loader, optimizer, experiment)
     if args.save:
         torch.save(main_model.state_dict(), 'main_model.pt')
     if args.test:
-        # run test loop here
         print("running testing loop...")
         test(main_model, main_test_loader, experiment)

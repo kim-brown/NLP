@@ -12,7 +12,6 @@ class AutoLabeler(nn.Module):
         super().__init__()
         self.linear1 = nn.Linear(vocab_size, hidden_layer_size)
         self.linear2 = nn.Linear(hidden_layer_size, 1)
-        # self.linear3 = nn.Linear(hidden_layer_size, 1)
 
     def forward(self, input):
 
@@ -28,5 +27,4 @@ class AutoLabeler(nn.Module):
         r = nn.ReLU()
         out2 = self.linear2(r(out1))
         s = nn.Softmax(dim=0)
-        # out3 = self.linear3(out2)
         return s(out2)
