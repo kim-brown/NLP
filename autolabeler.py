@@ -25,7 +25,8 @@ class AutoLabeler(nn.Module):
                  (batch_size, 1)
         """
         out1 = self.linear1(input)
-        out2 = self.linear2(out1)
+        r = nn.ReLU()
+        out2 = self.linear2(r(out1))
         s = nn.Softmax(dim=0)
         # out3 = self.linear3(out2)
         return s(out2)

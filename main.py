@@ -13,20 +13,21 @@ from tqdm import tqdm
 #DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 hyper_params = {
-    "batch_size": 2,
-    "embedding_size": 64,
-    "num_epochs": 1,
-    "learning_rate": 0.01,
+    "batch_size": 4,
+    "embedding_size": 375,
+    "num_epochs": 30,
+    "learning_rate": 0.001,
     "window_size": 128,
-    "hidden_layer_size": 512
+    "hidden_layer_size": 512,
+    "num_layers": 2
  }
 
 autolabeler_hyper_params = {
     "batch_size" : 2,
     "num_epochs" : 150,
     "learning_rate": 0.0001,
-    "window_size": 256,
-    "hidden_layer_size": 128,
+    "window_size": 128,
+    "hidden_layer_size": 512,
     "vocab_size": 2000
 }
 
@@ -78,16 +79,21 @@ def train(model, train_loader, optimizer, experiment):
     :param experiment: comet.ml experiment
     """
     loss_fn = torch.nn.MSELoss()
+    flagged_cnt = 0
+    total_posts = 0
     with experiment.train():
         for i in range(hyper_params["num_epochs"]):
             for posts, feats in tqdm(train_loader):
                 optimizer.zero_grad()
                 auto_labels = autolabeler_model(feats)
                 labs = (auto_labels > 0.5).float()
+                flagged_cnt += torch.sum(labs).item()
+                total_posts += len(labs)
                 logits = model(posts)
                 loss = loss_fn(logits, labs)
                 loss.backward()
                 optimizer.step()
+    print("flagged: ", flagged_cnt, " /", total_posts)
 
 
 def test(model, test_loader, experiment):
@@ -102,19 +108,22 @@ def test(model, test_loader, experiment):
     total_loss = 0.0
     num_correct = 0.0
     total_posts = 0.0
+    flagged_cnt = 0
     with experiment.validate():
         for i in range(hyper_params["num_epochs"]):
-            for posts, feats in tqdm(train_loader):
+            for posts, feats in tqdm(test_loader):
                 auto_labels = autolabeler_model(feats)
                 labs = (auto_labels > 0.5).float()
                 logits = model(posts)
                 total_loss += loss_fn(logits, labs).item()
                 num_correct += torch.sum(((logits > 0.5) == labs)).item()
                 total_posts += len(labs)
+                flagged_cnt += torch.sum(labs).item()
     accuracy = num_correct / total_posts
     perplexity = torch.exp(torch.tensor(total_loss / total_posts)).item()
     experiment.log_metric("perplexity", perplexity)
     experiment.log_metric("accuracy", accuracy)
+    print("flagged: ", flagged_cnt, " /", total_posts)
     print("PERPLEXITY: ", perplexity)
     print("ACCURACY: ", accuracy)
 
@@ -139,11 +148,11 @@ if __name__ == "__main__":
     experiment = Experiment(log_code=True)
     experiment.log_parameters(hyper_params)
 
-    train_loader, test_loader, vocab_size = load_main_dataset(args.depression_data,
+    main_train_loader, main_test_loader, vocab_size = load_main_dataset(args.depression_data,
         args.neutral_data, args.relationship_data, hyper_params["window_size"],
         hyper_params["batch_size"], autolabeler_hyper_params["vocab_size"])
     main_model = MainModel(vocab_size, hyper_params["hidden_layer_size"],
-    hyper_params["embedding_size"], hyper_params["window_size"])
+    hyper_params["embedding_size"], hyper_params["window_size"], hyper_params["num_layers"])
 
     autolabeler_model = AutoLabeler(vocab_size, autolabeler_hyper_params["hidden_layer_size"])
 
@@ -165,10 +174,10 @@ if __name__ == "__main__":
         # run train loop here
         print("running training loop...")
         optimizer = optim.Adam(main_model.parameters(), hyper_params["learning_rate"])
-        train(main_model, train_loader, optimizer, experiment)
+        train(main_model, main_train_loader, optimizer, experiment)
     if args.save:
         torch.save(main_model.state_dict(), 'main_model.pt')
     if args.test:
         # run test loop here
         print("running testing loop...")
-        test(main_model, test_loader, experiment)
+        test(main_model, main_test_loader, experiment)

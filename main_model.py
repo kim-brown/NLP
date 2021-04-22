@@ -5,14 +5,14 @@ import numpy as np
 
 
 class MainModel(nn.Module):
-    def __init__(self, vocab_size, hidden_layer_size, embedding_size, window_size):
+    def __init__(self, vocab_size, hidden_layer_size, embedding_size, window_size, num_layers):
         """
 
         """
         super().__init__()
         self.embeddings = torch.nn.Embedding(vocab_size, embedding_size)
         self.lstm = torch.nn.LSTM(embedding_size, hidden_layer_size,
-        num_layers=2, dropout=0.1)
+        num_layers=num_layers)
         self.linear1 = nn.Linear(hidden_layer_size, 1)
         self.linear2 = nn.Linear(window_size, 1)
 
